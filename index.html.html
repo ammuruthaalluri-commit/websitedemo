@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SNR Vehicle Portal — Final</title>
+  <style>
+    :root{
+      --yellow:#fff200;
+      --black:#0b0b0b;
+      --orange:#ff8c00;
+      --card-bg: rgba(0,0,0,0.6);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    body,html{height:100%;margin:0;background:#111;color:#fff}
+    .page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
+    .diagonal{position:relative;width:100%;max-width:1100px;border-radius:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.6);min-height:580px}
+    .split-login::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--black) 0 50%, var(--yellow) 50% 100%);z-index:0}
+    .split-create::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--yellow) 0 50%, var(--black) 50% 100%);z-index:0}
+    .split-dash::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--orange) 0 50%, var(--black) 50% 100%);z-index:0}
+
+    .card{position:relative;z-index:2;width:74%;max-width:540px;margin:28px auto;background:var(--card-bg);padding:26px;border-radius:12px;text-align:center}
+    .brand{font-weight:800;font-size:36px;letter-spacing:3px;margin-bottom:10px}
+    .brand.yellow{color:var(--yellow)}
+    .brand.black{color:var(--black);background:var(--yellow);display:inline-block;padding:4px 8px;border-radius:6px}
+
+    .tab-row{display:flex;gap:12px;justify-content:center;margin-bottom:18px}
+    .tab{background:rgba(255,255,255,0.08);border:none;padding:10px 18px;border-radius:8px;color:#fff;font-weight:700;cursor:pointer}
+    .tab.active{background:rgba(0,0,0,0.45);transform:translateY(-2px)}
+    h2{margin:6px 0 16px;font-size:26px}
+    .form{display:flex;flex-direction:column;gap:12px;align-items:center}
+    input, textarea, select{width:100%;max-width:420px;padding:10px 12px;border-radius:8px;border:none;font-size:15px;outline:none}
+    textarea{min-height:80px;resize:vertical}
+    .btn{background:var(--yellow);color:var(--black);border:none;padding:10px 18px;border-radius:8px;font-weight:800;cursor:pointer}
+    .note{font-size:13px;opacity:0.9;color:#eee;margin-top:6px}
+
+    /* Dashboard styles */
+    .dash-wrap{position:relative;z-index:2;padding:20px}
+    .dash-card{background:rgba(0,0,0,0.45);padding:16px;border-radius:12px;text-align:left;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;max-width:1100px;margin:12px auto}
+    .panel{width:420px;min-width:300px;background:rgba(0,0,0,0.55);padding:12px;border-radius:10px}
+    .row{display:flex;gap:10px}
+    .small{flex:1}
+    table{width:100%;border-collapse:collapse;margin-top:10px;background:#fff;color:#111;border-radius:8px;overflow:hidden}
+    th,td{padding:8px 10px;border-bottom:1px solid #eee;text-align:left;font-size:13px}
+    thead th{background:#f5f5f5;font-weight:700}
+    .totals{margin-top:10px;text-align:left;background:rgba(255,255,255,0.06);padding:8px;border-radius:8px}
+
+    @media(max-width:900px){ .card{width:92%} .panel{width:100%} .dash-card{flex-direction:column;align-items:center} }
+  </style>
+</head>
+<body>
+
+<!-- AUTH PAGE (login + create) -->
+<div id="authPage" class="page">
+  <div class="diagonal split-login" style="max-width:1100px">
+    <div style="position:relative;z-index:2;padding:24px">
+      <div class="card" id="authCard">
+        <div class="brand yellow">S N R</div>
+        <div class="tab-row">
+          <button id="tabLogin" class="tab active">Login</button>
+          <button id="tabCreate" class="tab">Create Account</button>
+        </div>
+
+        <!-- Login section -->
+        <div id="loginSec">
+          <h2 style="color:var(--yellow)">Login</h2>
+          <form id="loginForm" class="form" onsubmit="return handleLogin(event)">
+            <input id="loginUser" type="text" placeholder="Username or Mobile" required>
+            <input id="loginPass" type="password" placeholder="Password" required>
+            <button class="btn" type="submit">Login</button>
+          </form>
+          <div class="note">If you don't have an account, click Create Account.</div>
+        </div>
+
+        <!-- Create account section -->
+        <div id="createSec" style="display:none">
+          <div class="diagonal split-create" style="border-radius:8px;padding:6px">
+            <div class="card" style="background:rgba(255,255,255,0.9);color:var(--black)">
+              <div class="brand black">S N R</div>
+              <h2 style="color:var(--black)">Create Account</h2>
+              <form id="createForm" class="form" onsubmit="return handleCreate(event)">
+                <input id="createUser" type="text" placeholder="Username or Mobile" required>
+                <input id="createEmail" type="text" placeholder="Email (optional)">
+                <input id="createPass" type="password" placeholder="Password" required>
+                <input id="createConfirm" type="password" placeholder="Confirm Password" required>
+                <button class="btn" type="submit">Create Account</button>
+              </form>
+              <div class="note" style="color:#111">After creating, login with same username and password.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD PAGE -->
+<div id="dashPage" class="page" style="display:none">
+  <div class="diagonal split-dash" style="max-width:1200px">
+    <div class="dash-wrap">
+      <div class="card" style="max-width:1100px;background:rgba(0,0,0,0.35)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div><span class="brand yellow">S N R</span><div style="font-size:13px;color:#eee">Vehicle Register & Search</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="color:#eee;font-size:13px">Logged as: <span id="loggedAs" style="font-weight:700"></span></div>
+            <button class="tab" id="btnLogout">Logout</button>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <!-- Register Panel -->
+          <div class="panel">
+            <h3>Register Vehicle</h3>
+            <form id="regForm" class="form" onsubmit="return handleRegister(event)">
+              <input id="driverName" type="text" placeholder="Driver Name" required>
+              <input id="driverNumber" type="text" placeholder="Driver Number" required>
+              <input id="ownerName" type="text" placeholder="Owner Name" required>
+              <input id="ownerNumber" type="text" placeholder="Owner Number" required>
+              <input id="vehicleNumber" type="text" placeholder="Vehicle Number" required>
+              <input id="numTrips" type="number" placeholder="Number of Trips" min="1" value="1" required>
+              <input id="entryDate" type="date" required>
+              <input id="timeMorning" type="time" placeholder="Morning time">
+              <input id="timeEvening" type="time" placeholder="Evening time">
+              <input id="fuel" type="number" step="0.01" placeholder="Fuel (liters) or units" required>
+              <input id="moneyForFuel" type="number" step="0.01" placeholder="Money taken for fuel (₹)" required>
+              <input id="moneyToDriver" type="number" step="0.01" placeholder="Money given to driver (₹)" required>
+              <input id="moneyToOwner" type="number" step="0.01" placeholder="Money given to owner (₹)" required>
+              <input id="fixedAmount" type="number" step="0.01" placeholder="Fixed amount (₹)" required>
+              <div style="display:flex;gap:8px;margin-top:6px">
+                <button class="btn" type="submit">Register</button>
+                <button type="button" class="tab" onclick="clearRegForm()">Clear</button>
+              </div>
+            </form>
+            <div id="lastSaved" class="totals" style="display:none"></div>
+          </div>
+
+          <!-- Search Panel -->
+          <div class="panel">
+            <h3>Search Vehicle</h3>
+            <div style="display:flex;gap:8px">
+              <input id="searchVehicle" type="text" placeholder="Enter Vehicle Number">
+              <button class="btn" onclick="doSearch()">Search</button>
+            </div>
+            <div id="resultsArea" style="margin-top:12px">
+              <div class="note">Search results will appear here. Each registration is saved separately and totals are shown.</div>
+            </div>
+          </div>
+
+          <!-- All Vehicles panel -->
+          <div class="panel">
+            <h3>All Vehicles</h3>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input id="filterText" type="text" placeholder="Filter by vehicle or owner..." oninput="renderAll()">
+              <button class="tab" onclick="renderAll()">Refresh</button>
+            </div>
+            <div id="allList"><div class="note">Registered vehicles will appear here.</div></div>
+          </div>
+
+        </div> <!-- dash-card -->
+      </div> <!-- card -->
+    </div>
+  </div>
+</div>
+
+<script>
+// Storage keys
+const USERS = 'snr_users_final_v3';
+const VEH = 'snr_vehicles_final_v3';
+const AUTH = 'snr_auth_final_v3';
+
+// helpers
+const $ = id => document.getElementById(id);
+const getUsers = ()=> JSON.parse(localStorage.getItem(USERS) || '{}');
+const saveUsers = u=> localStorage.setItem(USERS, JSON.stringify(u));
+const getVehicles = ()=> JSON.parse(localStorage.getItem(VEH) || '{}');
+const saveVehicles = v=> localStorage.setItem(VEH, JSON.stringify(v));
+const setAuth = (u)=> localStorage.setItem(AUTH, u);
+const getAuth = ()=> localStorage.getItem(AUTH);
+const clearAuth = ()=> localStorage.removeItem(AUTH);
+
+// Auth tabs
+$('tabLogin').onclick = ()=>{ $('tabLogin').classList.add('active'); $('tabCreate').classList.remove('active'); $('loginSec').style.display='block'; $('createSec').style.display='none'; }
+$('tabCreate').onclick = ()=>{ $('tabCreate').classList.add('active'); $('tabLogin').classList.remove('active'); $('loginSec').style.display='none'; $('createSec').style.display='block'; }
+
+// Create account
+function handleCreate(e){
+  e.preventDefault();
+  const username = $('createUser').value.trim();
+  const email = $('createEmail').value.trim();
+  const pass = $('createPass').value;
+  const conf = $('createConfirm').value;
+  if(!username){ alert('Enter username'); return false; }
+  if(!pass){ alert('Enter password'); return false; }
+  if(pass !== conf){ alert('Passwords do not match'); return false; }
+  const users = getUsers();
+  users[username] = { username, email, password: pass, createdAt: new Date().toISOString() };
+  saveUsers(users);
+  alert('Account created. Login with same username & password.');
+  $('tabLogin').click();
+  $('loginUser').value = username;
+  return false;
+}
+
+// Login
+function handleLogin(e){
+  e.preventDefault();
+  const username = $('loginUser').value.trim();
+  const pass = $('loginPass').value;
+  if(!username || !pass){ alert('Enter username & password'); return false; }
+  const users = getUsers();
+  if(!users[username] || users[username].password !== pass){ alert('Invalid credentials'); return false; }
+  setAuth(username);
+  openDashboard();
+  return false;
+}
+
+$('btnLogout').onclick = ()=>{ clearAuth(); $('authPage').style.display='flex'; $('dashPage').style.display='none'; }
+
+// on load check auth
+if(getAuth()){ openDashboard(); }
+
+function openDashboard(){
+  $('authPage').style.display='none';
+  $('dashPage').style.display='flex';
+  $('loggedAs').textContent = getAuth();
+  renderAll();
+  $('resultsArea').innerHTML = '<div class="note">Search results will appear here.</div>';
+}
+
+// Register vehicle (new fields)
+function handleRegister(e){
+  e.preventDefault();
+  const driverName = $('driverName').value.trim();
+  const driverNumber = $('driverNumber').value.trim();
+  const ownerName = $('ownerName').value.trim();
+  const ownerNumber = $('ownerNumber').value.trim();
+  const vehicleNumber = $('vehicleNumber').value.trim().toUpperCase();
+  const numTrips = Number($('numTrips').value) || 0;
+  const entryDate = $('entryDate').value;
+  const timeMorning = $('timeMorning').value || '';
+  const timeEvening = $('timeEvening').value || '';
+  const fuel = parseFloat($('fuel').value) || 0;
+  const moneyForFuel = parseFloat($('moneyForFuel').value) || 0;
+  const moneyToDriver = parseFloat($('moneyToDriver').value) || 0;
+  const moneyToOwner = parseFloat($('moneyToOwner').value) || 0;
+  const fixedAmount = parseFloat($('fixedAmount').value) || 0;
+
+  if(!vehicleNumber){ alert('Enter vehicle number'); return false; }
+  const entry = { driverName, driverNumber, ownerName, ownerNumber, vehicleNumber, numTrips, entryDate, timeMorning, timeEvening, fuel, moneyForFuel, moneyToDriver, moneyToOwner, fixedAmount, createdAt: new Date().toISOString(), addedBy: getAuth() || 'unknown' };
+  const db = getVehicles();
+  if(!db[vehicleNumber]) db[vehicleNumber] = [];
+  db[vehicleNumber].push(entry);
+  saveVehicles(db);
+
+  $('lastSaved').style.display='block';
+  $('lastSaved').innerHTML = `<strong>Saved:</strong> ${vehicleNumber} — ${entryDate || new Date().toLocaleDateString()} (${timeMorning||'-'} / ${timeEvening||'-'}) — Trips: ${numTrips}, Fuel: ${fuel}, Fuel₹: ${moneyForFuel}, Driver₹: ${moneyToDriver}, Owner₹: ${moneyToOwner}, Fixed₹: ${fixedAmount}`;
+  alert('Vehicle registered successfully');
+  clearRegForm();
+  renderAll();
+  return false;
+}
+
+function clearRegForm(){
+  $('regForm').reset();
+  $('lastSaved').style.display='none';
+}
+
+// Search and display entries + totals
+function doSearch(){
+  const q = $('searchVehicle').value.trim().toUpperCase();
+  const out = $('resultsArea');
+  out.innerHTML='';
+  if(!q){ out.innerHTML = '<div class="note">Enter vehicle number to search.</div>'; return; }
+  const db = getVehicles();
+  const list = db[q];
+  if(!list || list.length===0){ out.innerHTML = `<div class="note">No records found for ${q}</div>`; return; }
+
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Date</th><th>Morning</th><th>Evening</th><th>Driver</th><th>Owner</th><th>Trips</th><th>Fuel</th><th>Fuel₹</th><th>Driver₹</th><th>Owner₹</th><th>Fixed₹</th></tr>';
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+
+  let totalTrips=0, totalFuel=0, totalFuelMoney=0, totalDriverMoney=0, totalOwnerMoney=0, totalFixed=0;
+  const sorted = list.slice().sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
+  sorted.forEach(row=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.entryDate||'-'}</td>
+                    <td>${row.timeMorning||'-'}</td>
+                    <td>${row.timeEvening||'-'}</td>
+                    <td>${escapeHtml(row.driverName)}<br><small>${escapeHtml(row.driverNumber)}</small></td>
+                    <td>${escapeHtml(row.ownerName)}<br><small>${escapeHtml(row.ownerNumber)}</small></td>
+                    <td>${row.numTrips}</td>
+                    <td>${formatNum(row.fuel)}</td>
+                    <td>${formatMoney(row.moneyForFuel)}</td>
+                    <td>${formatMoney(row.moneyToDriver)}</td>
+                    <td>${formatMoney(row.moneyToOwner)}</td>
+                    <td>${formatMoney(row.fixedAmount)}</td>`;
+    tbody.appendChild(tr);
+
+    totalTrips += Number(row.numTrips) || 0;
+    totalFuel += Number(row.fuel) || 0;
+    totalFuelMoney += Number(row.moneyForFuel) || 0;
+    totalDriverMoney += Number(row.moneyToDriver) || 0;
+    totalOwnerMoney += Number(row.moneyToOwner) || 0;
+    totalFixed += Number(row.fixedAmount) || 0;
+  });
+  table.appendChild(tbody);
+  out.appendChild(table);
+
+  const totalsDiv = document.createElement('div');
+  totalsDiv.className='totals';
+  const ownerAfterFixed = totalOwnerMoney - totalFixed;
+  totalsDiv.innerHTML = `<div><strong>Total entries:</strong> ${sorted.length}</div>
+                         <div><strong>Total Trips:</strong> ${totalTrips}</div>
+                         <div><strong>Total Fuel:</strong> ${formatNum(totalFuel)}</div>
+                         <div><strong>Total Fuel Money:</strong> ${formatMoney(totalFuelMoney)}</div>
+                         <div><strong>Total Given to Driver:</strong> ${formatMoney(totalDriverMoney)}</div>
+                         <div><strong>Total Given to Owner:</strong> ${formatMoney(totalOwnerMoney)}</div>
+                         <div><strong>Total Fixed Amount:</strong> ${formatMoney(totalFixed)}</div>
+                         <div style="margin-top:6px"><strong>Owner Total after subtracting Fixed:</strong> ${formatMoney(ownerAfterFixed)}</div>`;
+  out.appendChild(totalsDiv);
+}
+
+// Render all vehicles summary
+function renderAll(){
+  const out = $('allList');
+  out.innerHTML='';
+  const db = getVehicles();
+  const filter = $('filterText').value.trim().toLowerCase();
+  const keys = Object.keys(db).sort();
+  if(keys.length===0){ out.innerHTML = '<div class="note">No vehicles registered yet.</div>'; return; }
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Vehicle No</th><th>Owner</th><th>Last Date</th><th>Entries</th></tr>';
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  keys.forEach(k=>{
+    const entries = db[k];
+    if(!entries || entries.length===0) return;
+    const last = entries[entries.length-1];
+    const owner = last.ownerName || '-';
+    const rowText = (k + ' ' + owner).toLowerCase();
+    if(filter && !rowText.includes(filter)) return;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${k}</td><td>${escapeHtml(owner)}</td><td>${last.entryDate || new Date(last.createdAt).toLocaleDateString()}</td><td>${entries.length}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  out.appendChild(table);
+}
+
+// helpers
+function formatNum(n){ return Number(n).toLocaleString(undefined, {maximumFractionDigits:2, minimumFractionDigits: (String(n).includes('.')?2:0)}); }
+function formatMoney(n){ return '₹ ' + Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"'`]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;','`':'&#x60;'}[m])); }
+
+// attach forms & buttons
+document.getElementById('createForm').addEventListener('submit', handleCreate);
+document.getElementById('loginForm').addEventListener('submit', handleLogin);
+document.getElementById('regForm').addEventListener('submit', handleRegister);
+$('tabLogin').addEventListener('click', ()=>{$('tabLogin').classList.add('active');$('tabCreate').classList.remove('active');$('loginSec').style.display='block';$('createSec').style.display='none'});
+$('tabCreate').addEventListener('click', ()=>{$('tabCreate').classList.add('active');$('tabLogin').classList.remove('active');$('loginSec').style.display='none';$('createSec').style.display='block'});
+$('btnLogout').addEventListener('click', ()=>{ clearAuth(); $('authPage').style.display='flex'; $('dashPage').style.display='none'; });
+
+// expose functions for onclick if needed
+window.doSearch = doSearch;
+window.renderAll = renderAll;
+window.clearRegForm = clearRegForm;
+
+// initialize display if logged in already
+if(getAuth()) openDashboard();
+</script>
+
+</body>
+</html>
